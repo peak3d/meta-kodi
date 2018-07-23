@@ -1,7 +1,7 @@
 SUMMARY = "Kodi Media Center"
 
 LICENSE = "GPLv2"
-LIC_FILES_CHKSUM = "file://LICENSE.GPL;md5=930e2a5f63425d8dd72dbd7391c43c46"
+LIC_FILES_CHKSUM = "file://LICENSE.md;md5=60d644347832d2dd9534761f6919e2a6"
 
 FILESPATH =. "${FILE_DIRNAME}/kodi-18:"
 
@@ -24,6 +24,7 @@ DEPENDS += " \
             zip-native \
             \
             avahi \
+            bluez5 \
             boost \
             bzip2 \
             curl \
@@ -37,7 +38,6 @@ DEPENDS += " \
             giflib \
             libass \
             libcdio \
-            libcec \
             libdvdcss \
             libdvdread \
             libinput \
@@ -55,7 +55,6 @@ DEPENDS += " \
             libusb1 \
             libxslt \
             lzo \
-            mpeg2dec \
             python \
             samba \
             sqlite3 \
@@ -66,7 +65,7 @@ DEPENDS += " \
             zlib \
           "
 
-SRCREV = "2ab16beeeaf67e3b8dca703d96615bd80aca7c35"
+SRCREV = "64a79f3e8c1cc1af0b8dc4f645e60f6c889e3667"
 
 # 'patch' doesn't support binary diffs
 PATCHTOOL = "git"
@@ -75,7 +74,6 @@ PV = "18.0+gitr${SRCPV}"
 SRC_URI = "git://github.com/xbmc/xbmc.git;protocol=https \
            file://0001-estuary-move-recently-added-entries-to-the-top-in-ho.patch \
            file://0001-EGLutils-don-t-request-16-bit-depth.patch \
-           file://0001-gbm-select-valid-connector.patch \
            file://0002-kodi.sh-set-mesa-debug.patch \
            file://baba4e1d8517a9ab2c473eb4dbea1ba7ffc3aa74.patch \
            file://kodi.service \
@@ -93,7 +91,9 @@ ACCEL_x86 = "vaapi vdpau"
 ACCEL_x86-64 = "vaapi vdpau"
 
 # Default to GBM everywhere, sucks to be nvidia
-WINDOWSYSTEM ?= "gbm"
+WINDOWSYSTEM ?= "wayland"
+DEPENDS += "wayland-protocols libxkbcommon"
+
 
 PACKAGECONFIG ??= "${ACCEL} ${WINDOWSYSTEM} pulseaudio lcms"
 
@@ -117,7 +117,6 @@ EXTRA_OECMAKE = " \
     -DNATIVEPREFIX=${STAGING_DIR_NATIVE}${prefix} \
     -DJava_JAVA_EXECUTABLE=/usr/bin/java \
     -DWITH_TEXTUREPACKER=${STAGING_BINDIR_NATIVE}/TexturePacker \
-    \
     -DENABLE_LDGOLD=ON \
     -DENABLE_STATIC_LIBS=FALSE \
     -DUSE_LTO=${@oe.utils.cpu_count()} \
@@ -134,6 +133,8 @@ EXTRA_OECMAKE = " \
     -DENABLE_DVDCSS=OFF \
     -DENABLE_DEBUGFISSION=OFF \
     -DCMAKE_BUILD_TYPE=Release \
+    -DWAYLANDPP_SCANNER=/usr/bin/wayland-scanner++ \
+    -DENABLE_CEC=OFF \
 "
 
 # OECMAKE_GENERATOR="Unix Makefiles"
@@ -164,14 +165,15 @@ do_install_append() {
 SYSTEMD_PACKAGES = "${PN}"
 SYSTEMD_SERVICE_${PN} = "kodi.service"
 INSANE_SKIP_${PN} = "rpaths"
+INSANE_SKIP_${PN} += "already-stripped"
+
 
 FILES_${PN} += "${datadir}/xsessions ${datadir}/icons ${libdir}/xbmc ${datadir}/xbmc ${libdir}/firewalld"
 FILES_${PN}-dbg += "${libdir}/kodi/.debug ${libdir}/kodi/*/.debug ${libdir}/kodi/*/*/.debug ${libdir}/kodi/*/*/*/.debug"
 
 # kodi uses some kind of dlopen() method for libcec so we need to add it manually
 # OpenGL builds need glxinfo, that's in mesa-demos
-RRECOMMENDS_${PN}_append = " libcec \
-                             libcurl \
+RRECOMMENDS_${PN}_append = " libcurl \
                              libnfs \
                              ${@bb.utils.contains('PACKAGECONFIG', 'x11', 'xdyinfo xrandr xinit mesa-demos', '', d)} \
                              python \

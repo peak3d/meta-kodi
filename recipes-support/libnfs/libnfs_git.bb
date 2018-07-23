@@ -9,5 +9,6 @@ SRC_URI = "git://github.com/sahlberg/libnfs.git;protocol=https"
 
 S = "${WORKDIR}/git"
 
-inherit cmake
+FILES_${PN} += "${libdir}/*"
 
+inherit cmake
